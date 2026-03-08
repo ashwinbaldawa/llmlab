@@ -111,17 +111,13 @@ async def chat(req: ChatRequest):
     }
     if req.api_key:
         kwargs["api_key"] = req.api_key
-    # Anthropic doesn't allow both temperature and top_p
-    if req.provider == "anthropic":
-        if req.temperature is not None:
-            kwargs["temperature"] = req.temperature
-        elif req.top_p is not None:
-            kwargs["top_p"] = req.top_p
-    else:
-        if req.temperature is not None:
-            kwargs["temperature"] = req.temperature
-        if req.top_p is not None:
-            kwargs["top_p"] = req.top_p
+
+    # Dynamically check which params this provider supports
+    supported = set(litellm.get_supported_openai_params(model=litellm_model) or [])
+    if req.temperature is not None and "temperature" in supported:
+        kwargs["temperature"] = req.temperature
+    if req.top_p is not None and "top_p" in supported:
+        kwargs["top_p"] = req.top_p
 
     # For Ollama, set the API base
     if req.provider == "ollama":
@@ -158,17 +154,12 @@ async def _run_one(spec: CompareModelSpec, messages: list[dict], max_tokens: int
 
     litellm_model = to_litellm_model(spec.provider, spec.model)
     kwargs = {"model": litellm_model, "messages": messages, "max_tokens": max_tokens}
-    # Anthropic doesn't allow both temperature and top_p
-    if spec.provider == "anthropic":
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-        elif top_p is not None:
-            kwargs["top_p"] = top_p
-    else:
-        if temperature is not None:
-            kwargs["temperature"] = temperature
-        if top_p is not None:
-            kwargs["top_p"] = top_p
+    # Dynamically check which params this provider supports
+    supported = set(litellm.get_supported_openai_params(model=litellm_model) or [])
+    if temperature is not None and "temperature" in supported:
+        kwargs["temperature"] = temperature
+    if top_p is not None and "top_p" in supported:
+        kwargs["top_p"] = top_p
     if spec.api_key:
         kwargs["api_key"] = spec.api_key
     if spec.provider == "ollama":

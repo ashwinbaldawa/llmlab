@@ -119,10 +119,15 @@ def get_provider(provider_id: str):
 def get_models(provider_id: str):
     """Get models for a provider from litellm's built-in registry.
 
+    Filtering uses only litellm metadata (mode, deprecation_date) — no hardcoded lists.
     Returns models categorized and sorted by release date (newest first).
     """
+    from itertools import groupby
+
     raw_models = litellm.models_by_provider.get(provider_id, set())
     models = []
+
+    today = str(date.today())
 
     for model_id in raw_models:
         # Look up metadata in litellm's model_cost registry
@@ -130,55 +135,19 @@ def get_models(provider_id: str):
         if not info:
             info = litellm.model_cost.get(f"{provider_id}/{model_id}", {})
 
+        # Filter by mode — only keep chat models (litellm marks non-chat as embedding, image_generation, etc.)
         mode = info.get("mode", "chat")
         if mode not in ("chat", ""):
             continue
 
-        # Skip deprecated models
+        # Skip deprecated models using litellm's deprecation_date
         dep_date = info.get("deprecation_date")
         if dep_date and isinstance(dep_date, str) and len(dep_date) == 10:
             try:
-                if dep_date <= str(date.today()):
+                if dep_date <= today:
                     continue
             except (ValueError, TypeError):
                 pass
-
-        # Skip non-chat models and deprecated/irrelevant variants by name
-        lower = model_id.lower()
-        if any(skip in lower for skip in [
-            "dall-e", "tts", "whisper", "embed", "moderation",
-            "image", "audio", "rerank",
-            # Non-chat modalities
-            "realtime", "vision", "robotics", "computer-use",
-            # Search/tool-specific previews
-            "search-preview", "search-api", "customtools",
-            # Guard/safety models
-            "guard", "safeguard",
-            # Misc non-chat
-            "container", "learnlm",
-        ]):
-            continue
-
-        # Skip legacy/superseded model families
-        # Strip provider prefix for matching (e.g. "gemini/gemini-exp-1206" → "gemini-exp-1206")
-        bare = lower.split("/")[-1] if "/" in lower else lower
-        if any(bare.startswith(prefix) for prefix in [
-            "gpt-3.5",    # superseded by gpt-4o-mini
-            "gpt-4-32k",  # discontinued
-            "gpt-4-0314", "gpt-4-0613",  # old snapshots
-            "gpt-4-1106", "gpt-4-0125",  # old previews
-            "gemini-pro",   # 1.0 era
-            "gemini-1.5-",  # 1.5 era
-            "gemini-exp-",  # experimental
-            "gemini-2.0-flash-thinking",  # thinking experiments
-            "gemma-",       # open models via Gemini API
-            "gemini-gemma-", # gemma via Gemini API
-        ]) and "gpt-4o" not in bare and "gpt-4.1" not in bare:
-            continue
-
-        # Skip duplicate -latest aliases (prefer the base name)
-        if lower.endswith("-latest"):
-            continue
 
         max_input = info.get("max_input_tokens")
         ctx = _format_ctx(max_input)
@@ -209,22 +178,9 @@ def get_models(provider_id: str):
             deduped.append(m)
     models = deduped
 
-    # Sort: by category order first, then newest release date first, then name
-    models.sort(key=lambda m: (
-        _CATEGORY_ORDER.get(m["category"], 99),
-        -(ord(m["release_date"][0]) if m["release_date"] else 0),  # dummy
-        m["release_date"] is None,  # models with dates first
-        "".join(reversed(m["release_date"])) if m["release_date"] else "zzz",
-        m["name"],
-    ))
-    # Better sort: category, then reverse date (newest first)
-    models.sort(key=lambda m: (
-        _CATEGORY_ORDER.get(m["category"], 99),
-        "" if m["release_date"] is None else m["release_date"],
-    ))
-    # Reverse within each category by date (newest first)
-    from itertools import groupby
+    # Sort: category order, then newest release date first within each category
     sorted_models = []
+    models.sort(key=lambda m: _CATEGORY_ORDER.get(m["category"], 99))
     for _cat, group in groupby(models, key=lambda m: m["category"]):
         group_list = list(group)
         group_list.sort(key=lambda m: m["release_date"] or "0000-00-00", reverse=True)
