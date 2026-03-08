@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmlab"
+version = "0.1.0"
+description = "Unified LLM testing lab - test, compare, and interact with multiple AI providers through a single UI"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "LLMLab Contributors" }]
+keywords = ["llm", "ai", "testing", "openai", "anthropic", "gemini", "groq"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "litellm>=1.40.0",
+]
+
+[project.scripts]
+llmlab = "llmlab.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ashwinbaldawa/llmlab"
+Repository = "https://github.com/ashwinbaldawa/llmlab"
+
+[tool.setuptools.packages.find]
+include = ["llmlab*"]
+
+[tool.setuptools.package-data]
+llmlab = ["static/**/*"]
