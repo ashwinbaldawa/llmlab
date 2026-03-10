@@ -19,11 +19,12 @@ LLMLab is a local-first tool for prompt engineering and model evaluation. Pick a
 ## Quick Start
 
 ```bash
-# Clone
+# Install from PyPI
+pip install llmlab-ai
+
+# Or install from source
 git clone https://github.com/ashwinbaldawa/llmlab.git
 cd llmlab
-
-# Install backend
 pip install -e .
 
 # Install frontend

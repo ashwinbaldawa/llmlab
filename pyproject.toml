@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llmlab"
+name = "llmlab-ai"
 version = "0.1.0"
 description = "Unified LLM testing lab - test, compare, and interact with multiple AI providers through a single UI"
 readme = "README.md"
